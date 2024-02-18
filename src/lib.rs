@@ -9,6 +9,7 @@ use robotics_lib::world::World;
 use olympus::channel::Channel;
 use robotics_lib::interface::{Direction, go};
 use robotics_lib::utils::go_allowed;
+use macroquad::rand::ChooseRandom;
 
 pub struct BMO {
     robot: Robot,
