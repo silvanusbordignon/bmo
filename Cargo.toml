@@ -12,12 +12,6 @@ path = "src/lib.rs"
 [dependencies]
 # Commons Crate
 robotics_lib = { version = "0.1.17", registry = "kellnr" }
-# World Generator
-rip_worldgenerator = { version = "0.5.54", registry = "kellnr" }
-# Visualizer
-olympus = { git = "https://github.com/Kalsifer-742/olympus.git", tag = "v1.2.0" }
-macroquad = "0.4.4"
-sys-info = "0.9.1"
 # Tools
 op_map = { version = "1.0.5", registry = "kellnr" }
 sense_and_find_by_rustafariani = { version = "0.1.5", registry = "kellnr"}
@@ -26,5 +20,3 @@ searchtool_unwrap = { version = "0.1.1", registry = "kellnr" }
 crab_rave_explorer = { version = "0.2.1", registry = "kellnr" }
 oxagaudiotool = { version = "0.2.0", registry = "kellnr" }
 cargo_commandos_lucky = { version = "1.0.1", registry = "kellnr" }
-# Others
-rand = "0.8.5"

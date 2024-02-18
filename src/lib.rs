@@ -76,13 +76,3 @@ impl Runnable for BMO {
     fn get_backpack(&self) -> &BackPack { &self.robot.backpack }
     fn get_backpack_mut(&mut self) -> &mut BackPack { &mut self.robot.backpack }
 }
-
-fn window_conf() -> Conf {
-    Conf {
-        window_title: "Olympus".to_string(),
-        window_width: 1920,
-        window_height: 1080,
-        fullscreen: false,
-        ..Default::default()
-    }
-}
