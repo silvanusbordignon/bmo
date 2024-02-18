@@ -14,13 +14,13 @@ use robotics_lib::interface::{Direction, go};
 use robotics_lib::utils::go_allowed;
 use macroquad::rand::ChooseRandom;
 
-struct BMO {
+pub struct BMO {
     robot: Robot,
     channel: Rc<RefCell<Channel>>
 }
 
 impl BMO {
-    fn new(channel: Rc<RefCell<Channel>>) -> BMO {
+    pub fn new(channel: Rc<RefCell<Channel>>) -> BMO {
         BMO {
             robot: Robot::default(),
             channel
@@ -85,29 +85,4 @@ fn window_conf() -> Conf {
         fullscreen: false,
         ..Default::default()
     }
-}
-
-// Macroquad entry point
-#[macroquad::main(window_conf)]
-async fn main() {
-    // Channel used by the robot to comunicate with the GUI
-    let channel = Rc::new(RefCell::new(Channel::default()));
-    let robot = BMO::new(Rc::clone(&channel));
-
-    let world_size = 200;
-    let world_generator = MyWorldGen::new_param(
-        world_size,
-        5,
-        3,
-        3,
-        true,
-        true,
-        3,
-        false,
-        None
-    );
-
-    // Visualizer
-    let mut visualizer = Visualizer::new(robot, world_generator, world_size, Rc::clone(&channel));
-    visualizer.start().await;
 }

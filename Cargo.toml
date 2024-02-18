@@ -7,7 +7,7 @@ edition = "2021"
 
 [lib]
 name = "bmo"
-path = "src/main.rs"
+path = "src/lib.rs"
 
 [dependencies]
 # Commons Crate
