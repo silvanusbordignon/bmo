@@ -12,6 +12,8 @@ path = "src/lib.rs"
 [dependencies]
 # Commons Crate
 robotics_lib = { version = "0.1.17", registry = "kellnr" }
+# Visualizer
+olympus = { git = "https://github.com/Kalsifer-742/olympus.git", tag = "v2.0.0" }
 # Tools
 op_map = { version = "1.0.5", registry = "kellnr" }
 sense_and_find_by_rustafariani = { version = "0.1.5", registry = "kellnr"}

@@ -127,16 +127,12 @@ dependencies = [
  "asfalt_inator",
  "cargo_commandos_lucky",
  "crab_rave_explorer",
- "macroquad",
  "olympus",
  "op_map",
  "oxagaudiotool",
- "rand 0.8.5",
- "rip_worldgenerator",
  "robotics_lib",
  "searchtool_unwrap",
  "sense_and_find_by_rustafariani",
- "sys-info",
 ]
 
 [[package]]

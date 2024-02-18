@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use rip_worldgenerator::MyWorldGen;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
 use robotics_lib::runner::{Robot, Runnable};
@@ -8,11 +7,8 @@ use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::World;
 use olympus::channel::Channel;
-use olympus::Visualizer;
-use macroquad::{prelude::*};
 use robotics_lib::interface::{Direction, go};
 use robotics_lib::utils::go_allowed;
-use macroquad::rand::ChooseRandom;
 
 pub struct BMO {
     robot: Robot,
