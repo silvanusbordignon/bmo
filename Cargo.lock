@@ -131,6 +131,7 @@ dependencies = [
  "olympus",
  "op_map",
  "oxagaudiotool",
+ "rand 0.8.5",
  "robotics_lib",
  "searchtool_unwrap",
  "sense_and_find_by_rustafariani",

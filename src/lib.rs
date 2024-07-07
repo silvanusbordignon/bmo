@@ -1,45 +1,129 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
+use std::thread::{self, JoinHandle};
+use std::sync::mpsc;
+
+use rand::{Rng, thread_rng};
+
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::World;
+use robotics_lib::interface::robot_view;
+use robotics_lib::utils::LibError;
+
 use olympus::channel::Channel;
-use robotics_lib::interface::{Direction, go};
-use robotics_lib::utils::go_allowed;
-use macroquad::rand::ChooseRandom;
+
+use cargo_commandos_lucky::lucky_function::lucky_spin;
+
+use oxagaudiotool::OxAgAudioTool;
+use oxagaudiotool::sound_config::OxAgSoundConfig;
+
+// MentalState defines a set of emotions for the robot
+enum MentalState {
+    Happy,
+    Calm,
+    Sad,
+    Panic,
+}
+
+// State change probabilities
+const CHANCE_CALM_TO_HAPPY  :f64 = 0.01;
+const CHANCE_HAPPY_TO_CALM  :f64 = 0.1;
+const CHANCE_CALM_TO_SAD    :f64 = 0.01;
+const CHANCE_SAD_TO_CALM    :f64 = 0.015;
+const CHANCE_SAD_TO_PANIC   :f64 = 0.005;
+const CHANCE_PANIC_TO_SAD   :f64 = 0.09;
+
+// Structs used in the main -> worker thread communications
+
+#[derive(PartialEq)]
+enum Command {
+    PLAY(Sound),
+    STOP
+}
+
+#[derive(PartialEq)]
+enum Sound {
+    HAPPY,
+    CALM,
+    SAD,
+    PANIC
+}
+
+// Below is the robot's implementation
 
 pub struct BMO {
     robot: Robot,
-    channel: Rc<RefCell<Channel>>
+    channel: Rc<RefCell<Channel>>,
+    mental_state: MentalState,
+    tx_channel: mpsc::Sender<Command>,
+    handle: JoinHandle<()>
 }
 
 impl BMO {
     pub fn new(channel: Rc<RefCell<Channel>>) -> BMO {
+
+        let (tx, rx) = mpsc::channel();
+
+        // Worker thread that will handle the audio
+
+        let handle = thread::spawn(move || {
+
+            let mut audio = OxAgAudioTool::new(
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new()
+            ).unwrap();
+
+            let background_music = OxAgSoundConfig::new_looped_with_volume("assets/audio/background.mp3", 0.25);
+            audio.play_audio(&background_music).unwrap();
+
+            loop {
+                match rx.recv() {
+                    Ok(command) => {
+                        match command {
+                            Command::PLAY(sound) => match sound {
+                                Sound::HAPPY => { let _ = audio.play_audio(&OxAgSoundConfig::new("assets/audio/happy.mp3")); },
+                                Sound::CALM => { let _ = audio.play_audio(&OxAgSoundConfig::new("assets/audio/calm.mp3")); },
+                                Sound::SAD => { let _ = audio.play_audio(&OxAgSoundConfig::new("assets/audio/sad.mp3")); },
+                                Sound::PANIC => { let _ = audio.play_audio(&OxAgSoundConfig::new("assets/audio/panic.mp3")); }
+                            },
+                            Command::STOP => ()
+                        }
+                    }
+                    Err(_) => {
+                        break;
+                    }
+                }
+            }
+        });
+
         BMO {
             robot: Robot::default(),
-            channel
+            channel,
+            mental_state: MentalState::Calm,
+            tx_channel: tx,
+            handle
         }
     }
 }
 
 impl Runnable for BMO {
     fn process_tick(&mut self, world: &mut World) {
-        let directions = vec![
-            Direction::Up,
-            Direction::Left,
-            Direction::Down,
-            Direction::Right
-        ];
-        let dir = directions.choose().unwrap();
 
-        match go_allowed(self, world, dir) {
-            Ok(_) => {
-                let _ = go(self, world, dir.clone());
-            },
-            Err(_) => ()
+        // Robot view in order to allow tools to work properly
+        let _ = robot_view(self, world);
+
+        // Choose how to act based on the robot's mental state
+        match self.mental_state {
+            MentalState::Happy => happy_routine(self, world),
+            MentalState::Calm => calm_routine(self, world),
+            MentalState::Sad => sad_routine(self, world),
+            MentalState::Panic => panic_routine(self, world)
         }
 
         // You need to call this method to update the GUI
@@ -72,4 +156,76 @@ impl Runnable for BMO {
     fn get_coordinate_mut(&mut self) -> &mut Coordinate { &mut self.robot.coordinate }
     fn get_backpack(&self) -> &BackPack { &self.robot.backpack }
     fn get_backpack_mut(&mut self) -> &mut BackPack { &mut self.robot.backpack }
+}
+
+fn happy_routine(robot: &mut BMO, world: &mut World) {
+
+    match lucky_spin(&mut robot.robot) {
+        Ok(message) => println!("{message}"),
+        Err(LibError::NotEnoughEnergy) => eprintln!("Not enough energy to lucky spin!"),
+        Err(_) => eprintln!("ERROR: call to lucky spin")
+    }
+
+    // Transition back to calm
+    if thread_rng().gen_bool(CHANCE_HAPPY_TO_CALM) {
+
+        eprintln!("---- CALM ----");
+
+        robot.tx_channel.send(Command::PLAY(Sound::CALM)).unwrap();
+        robot.mental_state = MentalState::Calm;
+    }
+}
+
+fn calm_routine(robot: &mut BMO, world: &mut World) {
+
+    // Transitions to either sad or happy
+    // Priority is given to the former
+
+    if thread_rng().gen_bool(CHANCE_CALM_TO_SAD) {
+
+        eprintln!("---- SAD ----");
+
+        robot.mental_state = MentalState::Sad;
+        robot.tx_channel.send(Command::PLAY(Sound::SAD)).unwrap();
+    }
+    if thread_rng().gen_bool(CHANCE_CALM_TO_HAPPY) {
+
+        eprintln!("---- HAPPY ----");
+
+        robot.mental_state = MentalState::Happy;
+        robot.tx_channel.send(Command::PLAY(Sound::HAPPY)).unwrap();
+    }
+}
+
+fn sad_routine(robot: &mut BMO, world: &mut World) {
+
+    // Transitions either back to calm or to panic
+    // Priority is given to the former
+
+    if thread_rng().gen_bool(CHANCE_SAD_TO_CALM) {
+
+        eprintln!("---- CALM ----");
+
+        robot.mental_state = MentalState::Calm;
+        robot.tx_channel.send(Command::PLAY(Sound::CALM)).unwrap();
+    }
+    if thread_rng().gen_bool(CHANCE_SAD_TO_PANIC) {
+
+        eprintln!("---- PANIC ----");
+
+        robot.mental_state = MentalState::Panic;
+        robot.tx_channel.send(Command::PLAY(Sound::PANIC)).unwrap();
+    }
+}
+
+fn panic_routine(robot: &mut BMO, world: &mut World) {
+
+    // Transition back to sad
+    if thread_rng().gen_bool(CHANCE_PANIC_TO_SAD) {
+
+        eprintln!("---- SAD ----");
+
+        robot.mental_state = MentalState::Sad;
+        robot.tx_channel.send(Command::PLAY(Sound::SAD)).unwrap();
+    }
 }

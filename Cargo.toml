@@ -24,3 +24,4 @@ oxagaudiotool = { version = "0.2.0", registry = "kellnr" }
 cargo_commandos_lucky = { version = "1.0.1", registry = "kellnr" }
 # Other
 macroquad = "0.4.4"
+rand = { version = "0.8.5", features = [] }
