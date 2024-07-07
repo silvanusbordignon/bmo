@@ -1,8 +1,10 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Range;
 use std::rc::Rc;
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc;
+use std::time::Duration;
 
 use rand::{Rng, thread_rng};
 
@@ -12,7 +14,7 @@ use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::World;
-use robotics_lib::interface::{Direction, go, robot_view};
+use robotics_lib::interface::{destroy, Direction, go, robot_view, put};
 use robotics_lib::utils::{go_allowed, LibError};
 
 use olympus::channel::Channel;
@@ -20,9 +22,12 @@ use olympus::channel::Channel;
 use cargo_commandos_lucky::lucky_function::lucky_spin;
 use crab_rave_explorer::direction::RichDirection;
 use macroquad::rand::ChooseRandom;
+use macroquad::window::next_frame;
+use op_map::op_pathfinding::{OpActionInput, OpActionOutput};
 
 use oxagaudiotool::OxAgAudioTool;
 use oxagaudiotool::sound_config::OxAgSoundConfig;
+use robotics_lib::world::tile::Content;
 
 // MentalState defines a set of emotions for the robot
 enum MentalState {
@@ -233,7 +238,51 @@ fn sad_routine(robot: &mut BMO, world: &mut World) {
     // In this context, this "autopilot" mode is a tool called op_map, and the "something useful"
     // corresponds to actions given to the tool which can be considered beneficial for the robot
 
-    // TODO: use op_map
+    let mut shopping_list = op_map::op_pathfinding::ShoppingList::new(Vec::new());
+
+    // If the backpack's already full it makes no sense trying to destroy a tree
+
+    if robot.get_backpack().get_size() != 20 {
+        shopping_list.list.push((Content::Tree(1), Some(OpActionInput::Destroy())));
+    }
+    shopping_list.list.push((Content::Crate(Range::default()), Some(OpActionInput::Put(Content::Tree(1), 1))));
+
+
+    // For each item in the shopping list
+    while shopping_list.list.len() > 0 {
+
+        // Time delay helping the visualizer on my machine
+        thread::sleep(Duration::from_millis(100));
+
+        // Find the best action for that item in the shopping list
+        match op_map::op_pathfinding::get_best_action_to_element(robot, world, &mut shopping_list) {
+            Some(next_action) => {
+
+                eprintln!("Sad | op_map next action {:?}", next_action);
+
+                match next_action {
+                    OpActionOutput::Move(dir) => {
+                        go(robot, world, dir).expect("Sad - op_map can't move");
+                    }
+                    OpActionOutput::Destroy(dir) => {
+                        match destroy(robot, world, dir) {
+                            Ok(_) => (),
+                            Err(LibError::NotEnoughSpace(x)) => eprintln!("Sad - no space to destroy"),
+                            Err(e) => eprintln!("Sad - destroy {:?}", e)
+                        }
+                    }
+                    OpActionOutput::Put(c, u, d) => {
+                        match put(robot, world, c, u, d) {
+                            Ok(_) => (),
+                            Err(LibError::OperationNotAllowed) => eprintln!("Sad - put not allowed"),
+                            Err(e) => eprintln!("Sad - put {:?}", e)
+                        }
+                    }
+                }
+            },
+            None => { eprintln!("Sad | op_map no action, no content probably"); shopping_list.print_shopping_list(); break }
+        }
+    }
 
     // Transitions either back to calm or to panic
     // Priority is given to the former
