@@ -12,12 +12,13 @@ use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::World;
-use robotics_lib::interface::robot_view;
-use robotics_lib::utils::LibError;
+use robotics_lib::interface::{Direction, go, robot_view};
+use robotics_lib::utils::{go_allowed, LibError};
 
 use olympus::channel::Channel;
 
 use cargo_commandos_lucky::lucky_function::lucky_spin;
+use macroquad::rand::ChooseRandom;
 
 use oxagaudiotool::OxAgAudioTool;
 use oxagaudiotool::sound_config::OxAgSoundConfig;
@@ -178,6 +179,8 @@ fn happy_routine(robot: &mut BMO, world: &mut World) {
 
 fn calm_routine(robot: &mut BMO, world: &mut World) {
 
+    // TODO: CALM ROUTINE
+
     // Transitions to either sad or happy
     // Priority is given to the former
 
@@ -199,6 +202,8 @@ fn calm_routine(robot: &mut BMO, world: &mut World) {
 
 fn sad_routine(robot: &mut BMO, world: &mut World) {
 
+    // TODO: SAD ROUTINE
+
     // Transitions either back to calm or to panic
     // Priority is given to the former
 
@@ -219,6 +224,23 @@ fn sad_routine(robot: &mut BMO, world: &mut World) {
 }
 
 fn panic_routine(robot: &mut BMO, world: &mut World) {
+
+    // When panicking, BMO doesn't know what to do, and just moves to a random nearby tile
+
+    let directions = vec![
+        Direction::Up,
+        Direction::Left,
+        Direction::Down,
+        Direction::Right
+    ];
+    let dir = directions.choose().unwrap();
+
+    match go_allowed(robot, world, dir) {
+        Ok(_) => {
+            let _ = go(robot, world, dir.clone());
+        },
+        Err(_) => ()
+    }
 
     // Transition back to sad
     if thread_rng().gen_bool(CHANCE_PANIC_TO_SAD) {
