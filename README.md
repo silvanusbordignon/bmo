@@ -11,3 +11,7 @@ At any point in time, the robot is feeling one of these emotions:
 - **calm**: when BMO is calm, he wonders around the map and interacts with it
 - **sad**: when sadness ensues, the robot moves less and less, often spending much of its time thinking about his life
 - **panic**: when BMO feels the most helpless, it gets into a sort of desperate state, running around frantically and destroying most of the items it finds in its path
+
+## Copyright note
+
+Background music from [Fesliyan Studios](https://www.fesliyanstudios.com/royalty-free-music/downloads-c/8-bit-music/6).
