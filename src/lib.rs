@@ -18,6 +18,7 @@ use robotics_lib::utils::{go_allowed, LibError};
 use olympus::channel::Channel;
 
 use cargo_commandos_lucky::lucky_function::lucky_spin;
+use crab_rave_explorer::direction::RichDirection;
 use macroquad::rand::ChooseRandom;
 
 use oxagaudiotool::OxAgAudioTool;
@@ -62,7 +63,7 @@ pub struct BMO {
     channel: Rc<RefCell<Channel>>,
     mental_state: MentalState,
     tx_channel: mpsc::Sender<Command>,
-    handle: JoinHandle<()>
+    calm_moves: Vec<RichDirection>
 }
 
 impl BMO {
@@ -108,7 +109,7 @@ impl BMO {
             channel,
             mental_state: MentalState::Calm,
             tx_channel: tx,
-            handle
+            calm_moves: Vec::new()
         }
     }
 }
@@ -179,7 +180,31 @@ fn happy_routine(robot: &mut BMO, world: &mut World) {
 
 fn calm_routine(robot: &mut BMO, world: &mut World) {
 
-    // TODO: CALM ROUTINE
+    // When the robot's calm, there's not much going on in its mind. There's a subtle interest in
+    // novelty, which the robots expresses by exploring new tiles; this is done by using a tool
+
+    if robot.calm_moves.len() == 0 {
+        match crab_rave_explorer::algorithm::cheapest_border(world, robot) {
+            None => eprintln!("Calm - Robot cannot move using explorer"),
+            Some(v) => match crab_rave_explorer::algorithm::move_to_cheapest_border(world, robot, v) {
+                Ok(_) => (),
+                Err((leftover_moves, err)) => {
+                    eprintln!("Calm - Robot did not move because of {:?}", err);
+                    robot.calm_moves = leftover_moves
+                }
+            }
+        }
+    }
+    else {
+        match crab_rave_explorer::algorithm::move_to_cheapest_border(world, robot, robot.calm_moves.clone()) {
+            Ok(_) => (),
+            Err((leftover_moves, err)) => {
+                eprintln!("Calm - Robot did not move because of {:?}", err);
+                robot.calm_moves = leftover_moves
+            }
+        }
+        robot.calm_moves = Vec::new();
+    }
 
     // Transitions to either sad or happy
     // Priority is given to the former
@@ -202,7 +227,13 @@ fn calm_routine(robot: &mut BMO, world: &mut World) {
 
 fn sad_routine(robot: &mut BMO, world: &mut World) {
 
-    // TODO: SAD ROUTINE
+    // When sad, BMO doesn't really think about what to do. It basically goes in autopilot mode and
+    // tries to do something useful, even though it will not resolve any of its internal conflicts
+
+    // In this context, this "autopilot" mode is a tool called op_map, and the "something useful"
+    // corresponds to actions given to the tool which can be considered beneficial for the robot
+
+    // TODO: use op_map
 
     // Transitions either back to calm or to panic
     // Priority is given to the former
